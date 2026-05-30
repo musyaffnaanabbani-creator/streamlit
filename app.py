@@ -1,126 +1,184 @@
 import streamlit as st
 
 # ==========================================
-# KELAS NODE KATEGORI
+# KELAS NODE ORGANISASI (GENERAL TREE)
+# ==========================================
+class OrganisasiNode:
+    def __init__(self, nama_jabatan):
+        self.nama = nama_jabatan
+        self.bawahan = []
 
+    # Menambahkan bawahan
+    def tambah_bawahan(self, node_baru):
+        self.bawahan.append(node_baru)
 
-class KategoriNode:
-    def __init__(self, nama_kategori):
-        self.nama = nama_kategori
-        self.sub_kategori = []
-
-    def tambah_sub(self, node_kategori):
-        self.sub_kategori.append(node_kategori)
-
-    #Mengubah fungsi print menjadi return fungsi agar bis ditampilkan di web
-
-    def tampilkan_tree(self, level=0):
+    # Menampilkan struktur organisasi
+    def tampilkan_struktur(self, level=0):
         indentasi = "    " * level
-        simbol = "↳ " if level > 0 else " +"
-        hasil = f"{indentasi}{simbol}{self.nama}"
+        simbol = "↳ " if level > 0 else "👑 "
         
-        for sub in self.sub_kategori:
-            hasil += "\n" + sub.tampilkan_tree(level + 1)
+        hasil = f"{indentasi}{simbol}{self.nama}"
+
+        for bawahan in self.bawahan:
+            hasil += "\n" + bawahan.tampilkan_struktur(level + 1)
+
         return hasil
 
-    def cari_node(self, target_nama):
-        # Mencari node spesifik untuk menambahkan anak di bawahnya
-        if self.nama.lower() == target_nama.lower():
+    # Mencari jabatan tertentu
+    def cari_jabatan(self, target):
+        if self.nama.lower() == target.lower():
             return self
-            
-        for sub in self.sub_kategori:
-            hasil = sub.cari_node(target_nama)
+
+        for bawahan in self.bawahan:
+            hasil = bawahan.cari_jabatan(target)
             if hasil:
                 return hasil
-                
+
         return None
 
+    # Mencari jalur organisasi
     def cari_jalur(self, target, path=""):
-        # Mencari jalur lengkap (breadcrumb) seperti studi kasus sebelumnya
         jalur_saat_ini = path + " > " + self.nama if path else self.nama
-        
+
         if self.nama.lower() == target.lower():
             return jalur_saat_ini
-            
-        for sub in self.sub_kategori:
-            hasil = sub.cari_jalur(target, jalur_saat_ini)
+
+        for bawahan in self.bawahan:
+            hasil = bawahan.cari_jalur(target, jalur_saat_ini)
             if hasil:
                 return hasil
-                
+
         return None
 
-# ==========================================
-# PROGRAM UTAMA (STREAMLIT UI)
-# ==========================================
-st.set_page_config(page_title="Struktur Kategori", page_icon=" + ")
 
-st.title(" Pembuat Struktur Kategori")
-st.write("Aplikasi interaktif untuk mensimulasikan struktur data Tree.")
+# ==========================================
+# STREAMLIT UI
+# ==========================================
 
-#Inisialisasi session state untuk menyimpan struktur Tree agar tidak hilang saat halaman di refresh
+st.set_page_config(
+    page_title="Struktur Organisasi",
+    page_icon="🏢"
+)
+
+st.title("🏢 Struktur Organisasi - General Tree")
+st.write("Simulasi struktur organisasi menggunakan struktur data General Tree.")
+
+# Session State
 if "root" not in st.session_state:
-        st.session_state.root = None
+    st.session_state.root = None
 
-#Jika Root belum dibuat, tampilkan form pembuatan Root
+# ==========================================
+# MEMBUAT ROOT / PIMPINAN
+# ==========================================
 if st.session_state.root is None:
-        st.info("Sistem belum memiliki kategori utama. Silakan buat terlebih dahulu.")
-        
-        nama_root = st.text_input("Masukkan nama kategori utama (Root): ", value="Toko Saya")
-        
-        if st.button("Buat Kategori Utama", type="primary"):
-            st.session_state.root = KategoriNode(nama_root)
-            st.rerun() #Refresh halaman 
 
-#Jika Root sudah ada, tampilkan Menu Utama Menggunakan Tabs
+    st.info("Silakan buat jabatan tertinggi terlebih dahulu.")
+
+    nama_root = st.text_input(
+        "Masukkan Jabatan Tertinggi:",
+        value="Direktur Utama"
+    )
+
+    if st.button("Buat Struktur Organisasi", type="primary"):
+        st.session_state.root = OrganisasiNode(nama_root)
+        st.rerun()
+
+# ==========================================
+# MENU UTAMA
+# ==========================================
 else:
+
     root = st.session_state.root
 
-    #Mengganti menu CLI dengan sistem Tab yang lebih modern
-    tab1, tab2, tab3 = st.tabs(["Lihat Struktur", "Tambah Sub-Kategori", "Cari Jalur"])
+    tab1, tab2, tab3 = st.tabs([
+        "Lihat Struktur",
+        "Tambah Jabatan",
+        "Cari Jalur"
+    ])
 
-    # TAB 1: Lihat Struktur
+    # ==========================================
+    # TAB 1 - LIHAT STRUKTUR
+    # ==========================================
     with tab1:
-        st.subheader("Struktur Kategori Saat Ini")
-        tree_teks = root.dapatkan_tree_string()
-        #Menggunakan st.code agar format indentasi (spasi) tetap rapi
-        st.code(tree_teks,  language="text")
-    # TAB 2: Tambah Sub-Kategori
+
+        st.subheader("📌 Struktur Organisasi")
+
+        struktur = root.tampilkan_struktur()
+
+        st.code(struktur, language="text")
+
+    # ==========================================
+    # TAB 2 - TAMBAH JABATAN
+    # ==========================================
     with tab2:
-        st.subheader("Struktur Kategori Saat Ini")
-        induk_nama = st.text_input("Nama Kategori induk tempat cabang ditambahkan:")
-        anak_nama = st.text_input("Nama sub-kategori baru:")
 
-        if st.button("Tambah Kategori"):
-            if induk_nama and anak_nama:
-                induk_node = root.cari_node(induk_nama)
-                if induk_node:
-                    induk_node.tambah_sub(KategoriNode(anak_nama))
-                    st.success(f"Berhasil menambahkan '{anak_nama}' di bawah '{induk_node.nama}'!")
+        st.subheader("➕ Tambah Jabatan Baru")
+
+        nama_atasan = st.text_input(
+            "Masukkan nama atasan:"
+        )
+
+        nama_baru = st.text_input(
+            "Masukkan jabatan bawahan:"
+        )
+
+        if st.button("Tambah Jabatan"):
+
+            if nama_atasan and nama_baru:
+
+                atasan_node = root.cari_jabatan(nama_atasan)
+
+                if atasan_node:
+
+                    atasan_node.tambah_bawahan(
+                        OrganisasiNode(nama_baru)
+                    )
+
+                    st.success(
+                        f"'{nama_baru}' berhasil ditambahkan di bawah '{nama_atasan}'"
+                    )
+
                 else:
-                    st.error(f"Kategori '{induk_nama}' tidak ditemukan! Pastikan ejaannya benar.")
+                    st.error(
+                        f"Jabatan '{nama_atasan}' tidak ditemukan!"
+                    )
 
             else:
-                st.warning("Harap isi kedua kolom  di atas.")
+                st.warning("Semua kolom harus diisi!")
 
-    # TAB 3: Cari Jalur
+    # ==========================================
+    # TAB 3 - CARI JALUR
+    # ==========================================
     with tab3:
-        st.subheader("Pencarian Breadcrumb")                
-        target_cari = st.text_input("Nama kategori yang ingin dicari jalurnya: ")
-        if st.button("Cari Jalur"):
-            if target_cari:
-                hasil = root.cari_jalur(target_cari)
-                if hasil:
-                    st.success(f"Ditemukan!")
-                    st.info(f"Jalur: {hasil}")
-                else:
-                    st.error(f"Kategori '{target_cari}' tidak ditemukan dalam sistem.")
-            else:
-                st.warning("Harap isi nama kategori yang dicari.")
-        
-        # Tombol Reset
-        st.divider()
-        if st.button("Reset Sistem / Mulai dari Awal"):
-            st.session_state.root = None
-            st.rerun() 
 
-    
+        st.subheader("🔍 Cari Jalur Jabatan")
+
+        target = st.text_input(
+            "Masukkan jabatan yang dicari:"
+        )
+
+        if st.button("Cari Jalur"):
+
+            if target:
+
+                hasil = root.cari_jalur(target)
+
+                if hasil:
+                    st.success("Jabatan ditemukan!")
+                    st.info(f"Jalur Organisasi: {hasil}")
+
+                else:
+                    st.error("Jabatan tidak ditemukan!")
+
+            else:
+                st.warning("Masukkan nama jabatan terlebih dahulu.")
+
+    # ==========================================
+    # RESET SISTEM
+    # ==========================================
+    st.divider()
+
+    if st.button("🔄 Reset Struktur Organisasi"):
+
+        st.session_state.root = None
+        st.rerun()
